@@ -31,26 +31,21 @@
       border-radius: 5px;
       z-index: 10;
     }
-    #fireButton {
+    #restartBtn {
       position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background: #f0c25e;
-      padding: 20px 0;
-      text-align: center;
-      font-size: 20px;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 25px;
+      font-size: 18px;
       font-weight: bold;
-      color: white;
-      border-top: 2px solid #fff;
-      z-index: 10;
-    }
-    #fireButton span {
+      border: none;
+      border-radius: 5px;
       background: orangered;
-      padding: 15px 40px;
-      border-radius: 30px;
-      border: 3px solid white;
-      display: inline-block;
+      color: white;
+      cursor: pointer;
+      display: none; /* hidden initially */
+      z-index: 11;
     }
     #gameOver {
       display: none;
@@ -65,12 +60,36 @@
       border: 4px solid red;
       z-index: 20;
     }
+    #controls {
+      position: absolute;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      z-index: 10;
+      padding-bottom: 10px;
+    }
+    .control-btn {
+      background: #f0c25e;
+      padding: 20px 30px;
+      font-size: 24px;
+      font-weight: bold;
+      color: white;
+      border-radius: 10px;
+      border: 2px solid white;
+    }
   </style>
 </head>
 <body>
   <div id="score">SCORE: 0</div>
+  <button id="restartBtn">RESTART</button>
   <canvas id="gameCanvas"></canvas>
-  <div id="fireButton"><span>HOLD TO FIRE</span></div>
+  <div id="controls">
+    <div id="leftBtn" class="control-btn">←</div>
+    <div id="rightBtn" class="control-btn">→</div>
+  </div>
   <div id="gameOver">GAME OVER</div>
 
   <script>
@@ -81,15 +100,16 @@
 
     let gun = {
       x: canvas.width / 2,
-      y: canvas.height - 180,
+      y: canvas.height - 250, // moved higher
       width: 60,
       height: 120
     };
     let bullets = [];
     let obstacles = [];
     let score = 0;
-    let firing = false;
     let gameOver = false;
+    let moveLeft = false;
+    let moveRight = false;
 
     function createObstacle() {
       const radius = Math.random() * 30 + 20;
@@ -138,6 +158,16 @@
     function update() {
       if (gameOver) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (moveLeft) {
+        gun.x -= 5;
+        gun.x = Math.max(40, gun.x);
+      } 
+      if (moveRight) {
+        gun.x += 5;
+        gun.x = Math.min(canvas.width - 40, gun.x);
+      }
+
       drawGun();
 
       bullets = bullets.filter(b => b.y > -20);
@@ -155,6 +185,7 @@
         const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist < o.radius + 30) {
           document.getElementById("gameOver").style.display = "block";
+          document.getElementById("restartBtn").style.display = "block";
           gameOver = true;
         }
       });
@@ -183,32 +214,29 @@
       }
     }
 
-    document.getElementById("fireButton").addEventListener("touchstart", () => {
-      firing = true;
-      shoot();
-    });
-    document.getElementById("fireButton").addEventListener("touchend", () => {
-      firing = false;
-    });
-
     setInterval(() => {
-      if (firing) shoot();
+      shoot();
     }, 150);
 
-    window.addEventListener("deviceorientation", function(e) {
-      if (e.gamma !== null) {
-        gun.x += e.gamma / 2;
-        gun.x = Math.max(40, Math.min(canvas.width - 40, gun.x));
-      }
-    });
+    // Button Events
+    document.getElementById("leftBtn").addEventListener("touchstart", () => moveLeft = true);
+    document.getElementById("leftBtn").addEventListener("touchend", () => moveLeft = false);
+    document.getElementById("rightBtn").addEventListener("touchstart", () => moveRight = true);
+    document.getElementById("rightBtn").addEventListener("touchend", () => moveRight = false);
 
-    if (typeof DeviceMotionEvent !== "undefined" && typeof DeviceMotionEvent.requestPermission === "function") {
-      DeviceMotionEvent.requestPermission().then(response => {
-        if (response !== "granted") {
-          alert("Enable motion access in Safari Settings");
-        }
-      }).catch(console.error);
-    }
+    // Restart Button Logic
+    document.getElementById("restartBtn").addEventListener("click", () => {
+      // Reset game state
+      gameOver = false;
+      score = 0;
+      bullets = [];
+      obstacles = [];
+      gun.x = canvas.width / 2;
+      document.getElementById("score").innerText = "SCORE: 0";
+      document.getElementById("gameOver").style.display = "none";
+      document.getElementById("restartBtn").style.display = "none";
+      update();
+    });
 
     update();
   </script>
